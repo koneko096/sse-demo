@@ -1,0 +1,10 @@
+micronaut:
+    application:
+        name: playground
+    executors:
+        consumer:
+            type: fixed
+            nThreads: 8
+    server:
+        cors:
+            enabled: true
