@@ -21,7 +21,6 @@ public class AuthorService {
   }
 
   public Flowable<Book> subscribeFrom(String name) {
-    return subject.hide().toFlowable(BackpressureStrategy.BUFFER)
-        .filter(book -> name.equals(book.getTitle()));
+    return subscribeAll().filter(book -> name.equals(book.getAuthor()));
   }
 }

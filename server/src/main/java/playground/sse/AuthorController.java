@@ -4,12 +4,19 @@ import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
+import io.micronaut.http.annotation.QueryValue;
 import io.micronaut.http.sse.Event;
+import io.reactivex.Maybe;
 import io.reactivex.schedulers.Schedulers;
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Optional;
 
 @Controller("/author")
 public class AuthorController {
+  private static final Logger LOG = LoggerFactory.getLogger(AuthorController.class);
 
   private final AuthorService authorService;
 
@@ -23,15 +30,11 @@ public class AuthorController {
   }
 
   @Get("/subscribe")
-  Publisher<Event<Book>> events() {
-    return authorService.subscribeAll()
-        .map(Event::of)
-        .subscribeOn(Schedulers.newThread());
-  }
-
-  @Get("/subscribe/{name}")
-  Publisher<Event<Book>> eventsFrom(String name) {
-    return authorService.subscribeFrom(name)
+  Publisher<Event<Book>> events(@QueryValue Optional<String> author) {
+    LOG.info("subscribing events from {}", author.orElse("all"));
+    return Maybe.fromCallable(() -> author.orElse(null))
+        .flatMapPublisher(authorService::subscribeFrom)
+        .switchIfEmpty(authorService.subscribeAll())
         .map(Event::of)
         .subscribeOn(Schedulers.newThread());
   }

@@ -13,8 +13,8 @@ group "playground"
 
 repositories {
     mavenLocal()
+    jcenter()
     mavenCentral()
-    maven { url "https://jcenter.bintray.com" }
 }
 
 dependencyManagement {

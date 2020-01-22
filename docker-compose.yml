@@ -1,28 +1,63 @@
 version: '3'
 
 networks:
-  kafka-net:
+  sse-net:
     driver: bridge
 
 services:
-
-  zookeeper-server:
-    image: 'bitnami/zookeeper:latest'
+  web:
+    build: ./client
     networks:
-      - kafka-net
+      - sse-net
     ports:
-      - '2181:2181'
-    environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
-  kafka-server1:
-    image: 'bitnami/kafka:latest'
-    networks:
-      - kafka-net    
-    ports:
-      - '9092:9092'
-    environment:
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper-server:2181
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
-      - ALLOW_PLAINTEXT_LISTENER=yes
+      - '80:80'
     depends_on:
-      - zookeeper-server
+      - server1
+      - server2
+    volumes:
+      - ./client/nginx.conf:/etc/nginx/nginx.conf
+
+  server1:
+    build: ./server
+    networks:
+      - sse-net
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+
+  server2:
+    build: ./server
+    networks:
+      - sse-net
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper
+    networks:
+      - sse-net
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
+
+  kafka:
+    image: confluentinc/cp-kafka
+    networks:
+      - sse-net
+    ports:
+      - 9094:9094
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: INTERNAL://kafka:9092,OUTSIDE://kafka:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,OUTSIDE://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
